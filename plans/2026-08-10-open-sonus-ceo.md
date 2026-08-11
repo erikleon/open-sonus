@@ -168,16 +168,17 @@ events that two hours does not.
 #### Decision table, committed before any code
 
 The gate is not the threshold alone. It is the threshold plus the rules that stop a
-marginal result being talked into a pass. Fill in every blank and commit this file
-before writing code.
+marginal result being talked into a pass. The numeric criteria are committed below.
+The fixed conditions are recorded once the endpoint set is bought, and no code runs
+against this table until they are.
 
 ```
   NUMERIC CRITERIA
-   N   max offset, 95th percentile, per pair    __ ms
-   E   max single excursion                     __ ms
-   R   max correction rate                      __ per hour
-   M   max missing or low-confidence windows    __ %
-   D   deadline, then decide regardless         __ days
+   N   max offset, 95th percentile, per pair    10 ms
+   E   max single excursion                     30 ms
+   R   max correction rate                       6 per hour
+   M   max missing or low-confidence windows     1 %
+   D   deadline, then decide regardless         90 days
 
   FIXED CONDITIONS, recorded in advance
    - required endpoint pairs, named by model and generation
@@ -199,8 +200,43 @@ before writing code.
    Changing a number after seeing data means deleting the data and rerunning.
 ```
 
-R exists because a group that holds sync by resyncing every ninety seconds is inside
-budget and not shippable. Correction frequency is a first-class result, not a note.
+#### Where the numbers come from
+
+Each number is set at the bar the product has to meet, not at the bar the hardware is
+expected to reach. Setting them the other way round is how a gate becomes a formality.
+
+**N, 10 ms.** Ten milliseconds is 3.4 m of air, which is inside the path length
+difference a listener already accepts between two speakers in one room. Hold the
+sync error at the same order as the geometry the room imposes anyway and a mixed
+group sounds like one system. This is a 95th percentile over roughly 28,800 windows,
+so it describes the normal state of the run rather than its best moment.
+
+**E, 30 ms.** The tail that a percentile does not cover. E is three times N and stays
+inside the fusion range for music, where the echo threshold sits nearer 50 ms. The
+margin is deliberate, because echo thresholds are measured on clean single reflections
+and a real excursion arrives with a correction artefact attached to it. E is a ceiling
+on the single worst window in the whole run.
+
+**R, 6 per hour.** A group that holds sync by resyncing every ninety seconds is inside
+the offset budget and not shippable, so correction frequency is a first-class result
+rather than a note. Six per hour is one correction every ten minutes, or two to three
+across an album. R counts every correction a driver issues, taken from the driver logs,
+so the verdict stays machine-readable.
+
+**M, 1%.** M has to sit an order of magnitude below the 5% tail that N is measured on,
+or lost coverage alone can move the verdict. At 1%, even if every missing window hid a
+worse offset than every measured one, the true 95th percentile moves to about the 94th
+of the measured series and the verdict does not change. At 5% the percentile carries no
+information at all. 1% of an eight-hour run is about five minutes, which is a fair
+allowance for quiet passages and buffer events.
+
+**D, 90 days,** counted from the first M0 commit. It covers the staged plan with room
+for reruns: about a week for M0a, three weeks for the harness core and its synthetic
+suite, a week for M0b, and four weeks for the rig, the remaining pairs and the soaks.
+Hardware procurement is inside the clock rather than beside it, because a clock that
+starts after the parts arrive is a clock you can move. D is what stops the rig becoming
+the project. If the required pairs have no admissible eight-hour data on day 90, the
+verdict is fail, and fail routes to the fallback product rather than to an extension.
 
 **Fallback if the gate fails.** The project repositions to control plus first-party and
 Snapcast endpoints, and the cross-vendor claim is dropped rather than quietly weakened.
