@@ -1,0 +1,20 @@
+[project]
+name = "open-sonus-spike"
+version = "0.0.0"
+description = "Feasibility spike for open-sonus: measurement harness and throwaway protocol drivers"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[tool.pytest.ini_options]
+testpaths = ["spike/harness/tests"]
+pythonpath = ["."]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

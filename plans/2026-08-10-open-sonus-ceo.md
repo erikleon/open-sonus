@@ -1147,7 +1147,7 @@ Both were found by working through this table, which is the argument for the tab
 
 | Step | Modules touched | Depends on |
 |------|-----------------|------------|
-| M0a control authority inventory | none, documentation only | — |
+| M0a control authority inventory | `spike/harness/{content,origin,granularity,sonos,probe}` | — |
 | M0 patent screen | none, documentation only | — |
 | Harness: capture | `spike/harness/capture` | — |
 | Harness: correlate + synthetic suite | `spike/harness/correlate` | — |
@@ -1159,6 +1159,11 @@ Both were found by working through this table, which is the argument for the tab
 | Driver: AirPlay via sender process | `spike/drivers/airplay` | M0a, sender licence audit |
 | Driver: Snapcast | `spike/drivers/snapcast` | — |
 | M0b crude run | all of the above, minimally | M0a, capture, correlate, one driver pair |
+
+The inventory lane was expected to be documentation only. It is not: reading seek
+resolution off the control API gives the wrong answer, so the lane needs a served stream
+and a request log to read the answer off the receiver's behaviour instead. That code is
+written and tested, and it arrived before the capture lane because it needs no rig.
 
 **Lanes**
 
