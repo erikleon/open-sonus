@@ -183,9 +183,9 @@ against this table until they are.
   FIXED CONDITIONS, recorded in advance
    - required endpoint pairs        see the pair table below
    - firmware versions              see the endpoint inventory
-   - content corpus, fixed          OPEN
-   - network impairment profile     OPEN
-   - warm-up period                 OPEN, declare before the first run
+   - content corpus                 60 min manifest, probe every 2 s
+   - network impairment profile     Profile A gates, Profile B reports
+   - warm-up period                 10 min, before the measured 8 h
 
   EXCLUSION RULES
    - no dropping the worst pair
@@ -226,6 +226,74 @@ stream setup. So P2 and P3 are currently unbuildable, which leaves M0 able to me
 P1 and P0. A gate that can run only P1 does not test the cross-vendor claim and must not
 be reported as passing it. Closing the sender gap is now on the critical path to a
 meaningful M0 verdict, not a parallel concern.
+
+#### The remaining fixed conditions
+
+**Content corpus.** A fixed 60 minute manifest, played through four times per soak, with a
+probe burst every 2 s throughout.
+
+| Segment | Minutes | Why it is in the corpus |
+|---------|---------|-------------------------|
+| Dense, loud, percussive | 20 | The normal case, and the one that hides small errors |
+| Sparse and quiet, wide dynamics | 15 | Exercises the confidence gate on real material |
+| Sustained tonal | 10 | The beat-lock trap in its natural form |
+| Speech | 5 | A different spectral profile, and a real usage pattern |
+| Near silence | 5 | The gate must report no number rather than a noise peak |
+| A deliberately looped four-bar phrase | 5 | The false-peak trap, live rather than synthetic |
+
+The probe is a 10 ms linear chirp from 500 Hz to 8 kHz at −20 dBFS peak, music normalised
+to −16 LUFS. The band is chosen from both ends: below 500 Hz a Play:1 has little output
+and room modes dominate, above 8 kHz lossy coding and air absorption erode the edge that
+makes the peak sharp. A chirp rather than a maximum-length sequence, because an MLS is
+periodic and the plan rules out periodic ambiguity by name.
+
+Every 2 s matters arithmetically. The analysis uses a 4 s correlation window on a 1 s hop,
+so every one of the 28,800 windows in an eight-hour run contains two probes. No window
+rests on music alone, which is what makes the 28,800 figure honest rather than nominal.
+
+Two consequences to accept in writing. The corpus repeats every hour, and that is safe
+only while the correlation search window stays far below an hour; the repeat must never be
+allowed near the search window. And a chirp every 2 s for eight hours is not pleasant, so
+a soak makes the room unusable. This is a measurement, not a listening session.
+
+The manifest names each track with its source and a SHA-256, rather than shipping audio.
+That keeps the corpus reproducible by a third party without assuming the repository may
+redistribute the recordings. Prefer CC0 or CC-BY material for exactly that reason: a
+corpus nobody else may obtain makes the published number unverifiable.
+
+**Network impairment profile.** Two profiles. Only the first one gates.
+
+- **Profile A, clean.** Wired where the hardware allows. Wi-Fi endpoints on a dedicated
+  5 GHz SSID, fixed channel, no other clients, RSSI at or above −55 dBm. No injected
+  impairment and no background traffic beyond the stream itself.
+- **Profile B, representative home.** 2.4 GHz on a shared channel, RSSI −65 to −70 dBm, a
+  continuous 20 Mbit/s background transfer, 5 ms of added latency with 3 ms of jitter and
+  0.1% loss injected on the origin's egress, plus one deliberate 5 s origin outage at a
+  declared point to exercise the outage policy.
+
+Profile A gates because a system that cannot hold sync on a clean network will never hold
+it in a house, which makes A the necessary condition and the cheaper kill. Profile B is
+measured and published beside it as the robustness figure, and never substituted for it.
+Because the rig sits on an isolated segment, Profile B's impairment is injected
+deliberately rather than inherited from the house, so it is reproducible.
+
+Vendor auto-update is blocked at the segment router for the duration of every run. A
+firmware change mid-run already voids the run, so the cheaper move is to prevent it.
+
+**Warm-up period: 10 minutes**, ahead of the measured eight hours. A soak is therefore
+8 h 10 min of wall clock, and the percentiles cover the 8 h only, which keeps the window
+count at 28,800 and stops warm-up eating into M. Warm-up data is retained and plotted, and
+is simply not scored.
+
+Ten minutes is chosen to be generous for the things that genuinely settle — association,
+clock lock, buffer fill, all of which complete inside a minute or two — while staying far
+too short to hide thermal drift. That distinction is the whole point. Thermal drift is one
+of the effects the eight-hour soak exists to expose, so a warm-up long enough to remove it
+would defeat the run it is attached to.
+
+One rule closes the obvious loophole: **an endpoint that drops and rejoins mid-run gets no
+fresh warm-up.** Otherwise "it was still settling" becomes available at any moment, which
+is precisely the class of rationalisation the exclusion rules exist to refuse.
 
 #### Where the numbers come from
 
