@@ -28,6 +28,24 @@ chart carries no weight later.
 Cost scales with exposure, and exposure starts at public release. The M0 screen tells
 you whether to worry; that is enough until the trigger.
 
+### Cast endpoint validation
+
+Measure a Cast receiver against the decision table, and answer the pull-side question the
+authority matrix raises: given one live stream origin, two Cast devices fetch it
+independently and each starts wherever the live edge sits when it connects.
+
+**Trigger:** before any public claim that open-sonus groups Cast devices, and before M1
+freezes the endpoint contract. Fires early if a Cast device becomes available sooner.
+
+**Why deferred:** decided 2026-08-11. No Cast hardware was on hand and buying one was not
+judged worth it at this stage.
+
+**What it costs:** M0 cannot answer whether one encode can serve two pull receivers that
+join a live edge at different moments. Section 7 wants one encode per output format;
+independent correction wants one stream per endpoint. The Sonos probe already showed the
+pull side cannot have both, but it showed it for one vendor. Until a Cast device is
+measured, no M0 result may be quoted as covering Cast.
+
 ### Trademark owner and policy
 
 Name a legal owner for the project trademark and publish a usage policy.

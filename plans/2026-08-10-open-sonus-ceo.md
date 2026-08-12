@@ -181,11 +181,11 @@ against this table until they are.
    D   deadline, then decide regardless         90 days
 
   FIXED CONDITIONS, recorded in advance
-   - required endpoint pairs, named by model and generation
-   - firmware versions, pinned and logged
-   - content corpus, fixed
-   - network impairment profile, fixed
-   - warm-up period, declared before the run
+   - required endpoint pairs        see the pair table below
+   - firmware versions              see the endpoint inventory
+   - content corpus, fixed          OPEN
+   - network impairment profile     OPEN
+   - warm-up period                 OPEN, declare before the first run
 
   EXCLUSION RULES
    - no dropping the worst pair
@@ -199,6 +199,33 @@ against this table until they are.
    kills the broad cross-vendor claim. No post-hoc threshold changes.
    Changing a number after seeing data means deleting the data and rerunning.
 ```
+
+#### Required pairs, and the Cast decision
+
+**Cast is dropped from M0**, decided 2026-08-11. There is no Cast device here, and buying
+one to keep the row alive was judged not worth it now. The consequence is written down
+rather than absorbed: M0 will not answer the pull-side question the matrix raises, where
+two receivers fetch one origin and each lands wherever the live edge sits when it
+connects. That question moves to M1 with a trigger in `TODOS.md`. It is not resolved, and
+no M0 result may be quoted as if it were.
+
+| Pair | Members | Transports | Opaque both ends | Needs |
+|------|---------|------------|------------------|-------|
+| P0 control | Snapcast to Snapcast | push to push | no, by design | a Pi or spare box |
+| P1 baseline | Play:1 to Play:3, bridged | pull to pull | yes | nothing further |
+| P2 | Move as AirPlay to Play:3 bridged | push to pull | yes | an AirPlay sender |
+| P3 **the claim** | Apple TV to Play:3 bridged | push to pull | yes | an AirPlay sender |
+
+P3 is the only pair that tests the product thesis, because it is the only one crossing a
+vendor boundary. P1 is opaque at both ends and worth measuring, but two Sonos speakers
+holding sync says nothing about walls between brands.
+
+**Dropping Cast promotes the AirPlay sender from a direction to a blocker.** With Cast
+gone, AirPlay is the only remaining cross-vendor path, and today no sender completes a
+stream setup. So P2 and P3 are currently unbuildable, which leaves M0 able to measure only
+P1 and P0. A gate that can run only P1 does not test the cross-vendor claim and must not
+be reported as passing it. Closing the sender gap is now on the critical path to a
+meaningful M0 verdict, not a parallel concern.
 
 #### Where the numbers come from
 
@@ -532,7 +559,7 @@ import from `spike/drivers`.** The build fails on such an import.
   ├──────────┼───────────────┼──────────────┼─────────────┼─────────┤
   │ Snapcast │ full          │ push         │ yes         │    ?    │
   │ AirPlay  │ src timestamp │ push, RTP    │ GAP, see M1 │    ?    │
-  │ Cast     │ fetch+buffer  │ pull, URL    │ weak        │    ?    │
+  │ Cast     │ fetch+buffer  │ pull, URL    │ weak        │ not run │
   │ Sonos    │ seek only, 1s │ pull, URL    │ SoCo        │    ?    │
   └──────────┴───────────────┴──────────────┴─────────────┴─────────┘
 ```
@@ -1145,6 +1172,7 @@ Considered during the engineering review and explicitly excluded.
 | Testing `spike/drivers/*` | Throwaway by design. Effort goes to the harness, which survives |
 | Deleting `spike/drivers/*` at M0 exit | Git keeps it regardless, so deletion is theatre, and those drivers may hold the only discovered control semantics. The CI import ban is the real rule |
 | Bidirectional API version negotiation at M1 | Core and surface ship together at M1. Keep the version field, defer the protocol to M2 |
+| Cast in M0 | No device on hand, and buying one to keep the row alive was not judged worth it now. The cost is that the pull-side live-edge question goes unanswered. Triggered in `TODOS.md` |
 | Paid freedom-to-operate analysis before M0 | Nothing to clear if the physics fails. Triggered in `TODOS.md` |
 | Record-then-analyse capture as the only mode | An 8 h run is 16.6 GB and a rig fault is discovered 8 hours late. Streaming analysis surfaces a dead channel in the first minute. Raw is archived alongside, not instead |
 | Measuring on music alone | Correlation locks onto repeated beats and holds, producing a tight wrong answer. Probe bursts interleaved with music instead |
