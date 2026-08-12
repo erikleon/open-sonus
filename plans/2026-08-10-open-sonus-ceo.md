@@ -345,6 +345,53 @@ is tuned on a number the device almost never produces. This is the case the inve
 asked for when it said distribution rather than mean, and it appeared on the first
 device measured.
 
+#### M0a partial result: AirPlay control authority, 2026-08-11
+
+Measured against the Kitchen Move, the only AirPlay endpoint here that is a speaker rather
+than a television. What it advertises is good news. What can currently drive it is not.
+
+| Question | Answer | Source |
+|----------|--------|--------|
+| Timing model advertised | **PTP.** `PTPInfo: AirPlay;2.0.11`, feature bit 40 | `GET /info`, mDNS |
+| Buffered audio advertised | **Yes**, feature bit 38 | mDNS features |
+| Pairing needed to stream | **No.** Transient pairing, bit 47. Both Apple TVs require it | live handshake |
+| Audio formats | PCM and ALAC per RAOP `cn=0,1`; the AirPlay feature bits say PCM and AAC | mDNS |
+| Receiver latency window | 250 ms to 2000 ms, offered as 11025 to 88200 frames | captured SETUP |
+| A sender that reaches it | **None found** | live attempt |
+
+**The advertised authority is what the cross-vendor claim needs.** A receiver exposing
+buffered audio on a PTP-locked clock hands the timeline to the sender. That is the
+opposite of the Sonos position, where the only actuator is a one-second seek. On the
+evidence so far AirPlay is the strong protocol in the matrix and Sonos is the weak one.
+
+**Nothing available can currently use it.** pyatv 0.18.0 is MIT, actively maintained, and
+the best sender candidate found. That alone corrects an assumption in the licensing
+section: the mature senders are not all GPL. It gets further than expected, then stops.
+
+```
+  GET /info             200   AirTunes/366.0
+  POST /pair-pin-start  200   transient pairing: no code, no credential stored
+  POST /pair-setup      200
+  POST /pair-setup      200   pairing complete
+  SETUP  (session)      200   {eventPort, timingPort}
+  SETUP  (stream)       no response, times out
+```
+
+The session SETUP asked for `timingProtocol: NTP` while identifying itself as an iPhone,
+and the stream SETUP asked for `type: 96`, ALAC, with that 250 ms to 2 s latency window.
+So the sender negotiated the older realtime-and-NTP model inside an AirPlay 2 session,
+which is not the buffered-and-PTP path the Move advertises. Reading those two facts as
+cause and effect is a strong inference, not a proven one. What is certain is that the
+stream setup goes unanswered and no audio plays.
+
+**Consequence.** The sender gap is not closed, and it is a different shape than written.
+The plan expected to adopt a sender and audit its licence, with GPL the likely answer and
+a process boundary the price. The real constraint is capability, not licence: an MIT
+sender exists and does not reach the mode that matters. The routes are to drive a
+buffered-audio sender from a stack that already has one, to extend pyatv, or to treat
+AirPlay as realtime-only and measure whatever sync that yields. The third is the cheapest
+and can be measured as soon as any sender completes a stream setup.
+
 **Fallback if the gate fails.** The project repositions to control plus first-party and
 Snapcast endpoints, and the cross-vendor claim is dropped rather than quietly weakened.
 That fallback is a real product. The gate only has value if it can actually route you
@@ -663,7 +710,7 @@ before use rather than trusting this list:
 | SoCo, node-sonos | MIT | Library, safe |
 | pychromecast | MIT | Library, safe |
 | shairport-sync | Permissive, verify | Separate process, safer regardless |
-| AirPlay **sender** | UNKNOWN, verify in M0 | Separate process. See below |
+| AirPlay **sender** | pyatv is MIT, verified | Candidate, but see the capability finding below |
 | Music Assistant | Apache-2.0 | Library or process, safe |
 
 **The AirPlay sender is a real gap, not a footnote.** shairport-sync is a receiver.
@@ -673,9 +720,14 @@ behind a process boundary and verify its licence during M0, because writing an A
 sender is the single largest engineering item in the project and putting it inside a
 cheap spike would make a negative M0 result unattributable: protocol, or our code?
 
-The mature senders come from the GPL family. If that holds after the audit, the process
-boundary is permanent and the CI dependency check must cover it. Either way, Apple can
-break the protocol, and that risk is identical whether the code is ours or borrowed.
+That expectation was that the mature senders all come from the GPL family, making the
+process boundary permanent. The M0a probe found otherwise: pyatv is MIT and actively
+maintained, so licence is not the binding constraint. Capability is. It clears transient
+pairing against a Sonos Move and then fails to complete a stream setup, because it
+negotiates the older realtime-and-NTP model rather than the buffered-audio-and-PTP path
+the receiver advertises. A permissive sender that cannot reach the mode the sync claim
+depends on is not yet a solution. Either way, Apple can break the protocol, and that risk
+is identical whether the code is ours or borrowed.
 
 ## Technical foundations
 
@@ -783,7 +835,7 @@ Two deferrals with conditions attached:
 | Cast | pychromecast | Chromecast discovery and control |
 | UPnP/DLNA | gmediarender, upmpdcli | Legacy device interoperability |
 | Sonos control | SoCo, node-sonos | Direct LAN control over UPnP |
-| AirPlay **send** | Nothing chosen yet | GAP. Bridged AirPlay depends on it. Candidates named and licence-verified during M0 |
+| AirPlay **send** | pyatv, MIT, incomplete | GAP. Clears pairing and session setup against a Sonos Move, then stalls at stream setup. Licence is not the blocker, capability is |
 | Hardware base | Raspberry Pi with HiFiBerry, Allo or IQaudIO boards | Pre-certified audio modules |
 | Whole-home shell | Home Assistant | Automation, authentication, existing add-on distribution |
 
