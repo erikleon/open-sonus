@@ -229,8 +229,8 @@ meaningful M0 verdict, not a parallel concern.
 
 #### The remaining fixed conditions
 
-**Content corpus.** A fixed 60 minute manifest, played through four times per soak, with a
-probe burst every 2 s throughout.
+**Content corpus.** A fixed 60 minute manifest, played through eight times across the
+measured eight hours, with a probe burst every 2 s throughout.
 
 | Segment | Minutes | Why it is in the corpus |
 |---------|---------|-------------------------|
