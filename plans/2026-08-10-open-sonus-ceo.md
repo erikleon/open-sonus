@@ -286,16 +286,37 @@ queries.
 
 | Question | Answer | Source |
 |----------|--------|--------|
-| Rate or pitch adjustment | **None.** `TransportPlaySpeed` lists exactly one allowed value, `1` | Device SCPD |
+| Rate or pitch adjustment | **None.** `TransportPlaySpeed` allows only `1`, and `Play` at 1.02 and 0.98 is refused with UPnP error 717 | SCPD, then live |
 | Seek modes | `TRACK_NR`, `REL_TIME`, `TIME_DELTA`, and `X_DLNA_SeekTime` | SCPD, `GetCurrentTransportActions` |
-| Seek granularity | Not yet established. Needs playback | — |
+| Seek granularity | **1 s.** A fractional `REL_TIME` is accepted without error and the fraction is silently discarded | Origin byte offsets |
+| Seek cost | Connection torn down, fresh read from byte 0, then a new range request at the target | Origin request log |
 | Position observability | **1 s.** `RelTime` is reported as `H:MM:SS` | `GetPositionInfo` |
 | Command latency | slave p50 18 ms, p95 25 ms; coordinator p50 20 ms, **p95 1021 ms**, mean 88 ms | 60 calls per device |
 | Authority depends on group role | **Yes.** A slave offers only `Stop` and `Play`. Seek exists only on the coordinator | All four units |
 | Self-initiated re-buffer or reseek | Not yet established | — |
 | Output latency vs volume or grouping | Not yet established. Needs the rig | — |
 
-Three consequences, and the first one decides how to read the M0a kill criterion.
+**How seek granularity was measured, without a microphone.** open-sonus served the
+speaker a 300 s constant-rate PCM file over HTTP, so a byte offset maps exactly to a time.
+The speaker then declares its own seek resolution by which byte it asks for. Every
+fractional target came back on a whole second.
+
+| Seek requested | Byte fetched | Equals | Fraction |
+|----------------|--------------|--------|----------|
+| `00:00:30`     | 5292044      | 30.000000 s  | — |
+| `00:01:30.500` | 15876044     | 90.000000 s  | discarded |
+| `00:02:30.250` | 26460044     | 150.000000 s | discarded |
+| `00:03:30.125` | 37044044     | 210.000000 s | discarded |
+| `00:04:20.750` | 45864044     | 260.000000 s | discarded |
+
+This technique is worth keeping. It costs nothing, it needs no rig, and it gives an exact
+answer, so it should run against every pull-side endpoint before the microphones arrive.
+
+Note the failure style. Sonos does not reject a sub-second seek. It accepts it, returns
+success, and throws the fraction away. Anything that trusts the return value believes it
+holds an actuator 100 times finer than the one it has.
+
+Four consequences, and the first one decides how to read the M0a kill criterion.
 
 **There is no in-band rate actuator, so the actuator has to be the origin.** A Sonos in a
 bridged group fetches from open-sonus, so the fine control is not seek at all. It is the
@@ -311,6 +332,12 @@ independently. Section 7 asks for one encode per output format. Independent corr
 asks for one stream per endpoint. The pull side cannot have both. This answers the matrix
 row the plan left open: on the pull side, either pay for per-endpoint encoding, or give up
 per-endpoint correction.
+
+**Seek is not a correction, it is a restart.** Each seek tore down the connection, re-read
+the file from byte 0, and opened a new range request. So the coarse actuator is not merely
+coarse at 1 s against an N of 10 ms, it also interrupts the stream every time it is used.
+That makes it usable for initial alignment and for recovery from a large excursion, and
+unusable as a routine corrector at any rate R would permit.
 
 **Budget against the latency tail, not the mean.** The coordinator's p95 of 1021 ms
 against a p50 of 20 ms is two orders of magnitude above N. A loop tuned on the 88 ms mean
@@ -459,7 +486,7 @@ import from `spike/drivers`.** The build fails on such an import.
   │ Snapcast │ full          │ push         │ yes         │    ?    │
   │ AirPlay  │ src timestamp │ push, RTP    │ GAP, see M1 │    ?    │
   │ Cast     │ fetch+buffer  │ pull, URL    │ weak        │    ?    │
-  │ Sonos    │ transport cmd │ pull, URL    │ SoCo        │    ?    │
+  │ Sonos    │ seek only, 1s │ pull, URL    │ SoCo        │    ?    │
   └──────────┴───────────────┴──────────────┴─────────────┴─────────┘
 ```
 
