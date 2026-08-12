@@ -278,6 +278,46 @@ Three findings that limit what this hardware can be used for:
   Confirm whether this is the S1 or the S2 line, because the two expose different local
   control surfaces.
 
+#### M0a partial result: Sonos control authority, 2026-08-11
+
+Established against the Playroom Play:3 and its group coordinator without playing any
+audio. Every row below came from the device's own service description or from read-only
+queries.
+
+| Question | Answer | Source |
+|----------|--------|--------|
+| Rate or pitch adjustment | **None.** `TransportPlaySpeed` lists exactly one allowed value, `1` | Device SCPD |
+| Seek modes | `TRACK_NR`, `REL_TIME`, `TIME_DELTA`, and `X_DLNA_SeekTime` | SCPD, `GetCurrentTransportActions` |
+| Seek granularity | Not yet established. Needs playback | — |
+| Position observability | **1 s.** `RelTime` is reported as `H:MM:SS` | `GetPositionInfo` |
+| Command latency | slave p50 18 ms, p95 25 ms; coordinator p50 20 ms, **p95 1021 ms**, mean 88 ms | 60 calls per device |
+| Authority depends on group role | **Yes.** A slave offers only `Stop` and `Play`. Seek exists only on the coordinator | All four units |
+| Self-initiated re-buffer or reseek | Not yet established | — |
+| Output latency vs volume or grouping | Not yet established. Needs the rig | — |
+
+Three consequences, and the first one decides how to read the M0a kill criterion.
+
+**There is no in-band rate actuator, so the actuator has to be the origin.** A Sonos in a
+bridged group fetches from open-sonus, so the fine control is not seek at all. It is the
+byte stream served: resample slightly, or insert and drop samples. That is a continuous
+rate actuator applied outside the device. So "no actuator finer than a coarse seek" is
+true of the Sonos control API and false of the bridged data path, and the kill criterion
+has to be read against the path that will actually carry audio. Seek stays as the coarse
+actuator, for initial alignment and for recovery from a large excursion.
+
+**Per-endpoint rate control forces per-endpoint streams.** If the actuator is the served
+stream, then two Sonos units fetching one URL share one actuator and cannot be corrected
+independently. Section 7 asks for one encode per output format. Independent correction
+asks for one stream per endpoint. The pull side cannot have both. This answers the matrix
+row the plan left open: on the pull side, either pay for per-endpoint encoding, or give up
+per-endpoint correction.
+
+**Budget against the latency tail, not the mean.** The coordinator's p95 of 1021 ms
+against a p50 of 20 ms is two orders of magnitude above N. A loop tuned on the 88 ms mean
+is tuned on a number the device almost never produces. This is the case the inventory
+asked for when it said distribution rather than mean, and it appeared on the first
+device measured.
+
 **Fallback if the gate fails.** The project repositions to control plus first-party and
 Snapcast endpoints, and the cross-vendor claim is dropped rather than quietly weakened.
 That fallback is a real product. The gate only has value if it can actually route you
