@@ -238,6 +238,46 @@ starts after the parts arrive is a clock you can move. D is what stops the rig b
 the project. If the required pairs have no admissible eight-hour data on day 90, the
 verdict is fail, and fail routes to the fallback product rather than to an extension.
 
+#### Endpoint inventory, surveyed 2026-08-11
+
+Found by mDNS and SSDP from the development host. Firmware is recorded as the device
+reports it. This fills the firmware line of the fixed conditions. It does not yet fill
+the required-pairs line, for the reason below. Addresses below are placeholders from the documentation range; the real ones come from DHCP and are not worth recording.
+
+| Room | Endpoint | Model | Firmware | Address | Transport |
+|------|----------|-------|----------|---------|-----------|
+| Living Room | Sonos Connect:Amp | ZP120, hw 1.16.3.1-1.0 | 11.16.1 (57.23-74170) | 192.0.2.11 | pull |
+| Bedroom | Sonos Play:1 | S1, hw 1.8.3.7-1.0 | 11.16.1 (57.23-74170) | 192.0.2.12 | pull |
+| Playroom | Sonos Play:3 | S3, hw 1.8.1.3-1.1 | 11.16.1 (57.23-74170) | 192.0.2.13 | pull |
+| Kitchen | Sonos Move | S17, hw 1.25.1.11-1.2 | 11.16.1, AirPlay srcvers 366.0 | 192.0.2.14 | pull, or AirPlay push |
+| Basement TV | Apple TV 4K, 3rd gen | AppleTV14,1 | tvOS 26.6, AirPlay srcvers 960.13.1 | 192.0.2.21 | push |
+| Living room TV | Apple TV 4K, 3rd gen | AppleTV14,1 | tvOS 26.6, AirPlay srcvers 960.13.1 | 192.0.2.22 | push |
+
+**Two of the four protocols in the authority matrix have no hardware here.** An active
+browse returned nothing for `_googlecast._tcp` or `_snapcast._tcp`.
+
+- Cast has no endpoint at all. The pull-side question the matrix raises, where two
+  receivers fetch one origin and each lands wherever the live edge sits when it
+  connects, cannot be answered without one.
+- Snapcast has no endpoint either. This one is software, so a spare Pi or Linux box
+  closes it at no cost, and it has to be closed: the Snapcast control pair is what
+  shows the rig works before any opaque endpoint is measured.
+
+Three findings that limit what this hardware can be used for:
+
+- **Only the Move speaks AirPlay.** The other three Sonos units are pull-only. So on
+  this hardware a Sonos-to-AirPlay pair is either the Move against an Apple TV, or the
+  Move against itself in two different roles.
+- **An Apple TV is not a clean AirPlay speaker.** It has no analogue or optical output,
+  so its audio reaches the room through a television, and television audio processing is
+  the variable-output-latency case named in risk 6. Television, HDMI and lip sync are
+  already deferred, so this puts a deferred variable inside the primary measurement. A
+  dedicated AirPlay speaker is the cleaner subject.
+- **All four Sonos units report one firmware version.** That suits the pinned-firmware
+  rule, since a branch that updates rarely is less likely to void an eight-hour run.
+  Confirm whether this is the S1 or the S2 line, because the two expose different local
+  control surfaces.
+
 **Fallback if the gate fails.** The project repositions to control plus first-party and
 Snapcast endpoints, and the cross-vendor claim is dropped rather than quietly weakened.
 That fallback is a real product. The gate only has value if it can actually route you
